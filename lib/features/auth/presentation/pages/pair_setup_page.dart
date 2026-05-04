@@ -41,6 +41,8 @@ class _PairSetupPageState extends State<PairSetupPage> {
                   }
                 },
                 builder: (context, state) {
+                  // Read code from state if page was rebuilt
+                  final code = _generatedCode ?? (state is AuthPairCreated ? state.pairCode : null);
                   return Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -74,7 +76,7 @@ class _PairSetupPageState extends State<PairSetupPage> {
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             const SizedBox(height: 16),
-                            if (_generatedCode != null) ...[
+                            if (code != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24,
@@ -85,7 +87,7 @@ class _PairSetupPageState extends State<PairSetupPage> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Text(
-                                  _generatedCode!,
+                                  code,
                                   style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                                         letterSpacing: 8,
                                       ),

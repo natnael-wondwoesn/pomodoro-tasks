@@ -50,6 +50,7 @@ class PomodoroTasksApp extends StatelessWidget {
             darkTheme: AppTheme.dark,
             themeMode: themeMode,
             home: BlocBuilder<AuthBloc, AuthState>(
+              buildWhen: (previous, current) => current is! AuthLoading,
               builder: (context, state) {
                 if (state is AuthAuthenticated) {
                   if (!state.user.isPaired) {
@@ -59,6 +60,11 @@ class PomodoroTasksApp extends StatelessWidget {
                 }
                 if (state is AuthPairCreated) {
                   return const PairSetupPage();
+                }
+                if (state is AuthLoading) {
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
                 }
                 return const LoginPage();
               },
