@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:pomodoro_tasks/firebase_options.dart';
 import 'package:pomodoro_tasks/app_shell.dart';
 import 'package:pomodoro_tasks/core/theme/app_theme.dart';
 import 'package:pomodoro_tasks/features/auth/presentation/bloc/auth_bloc.dart';
@@ -17,7 +18,9 @@ import 'package:pomodoro_tasks/injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await di.init();
   runApp(const PomodoroTasksApp());
 }
