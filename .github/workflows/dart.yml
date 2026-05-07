@@ -13,11 +13,13 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          architecture: x64
-      - run: flutter pub get
-      
 
-      - run: pod repo update
+      - run: flutter clean
+      - run: rm -rf ios/Pods
+      - run: rm -f ios/Podfile.lock
+      - run: flutter pub get
+
+      - run: pod install --repo-update
         working-directory: ios
 
       - run: flutter build ios --release --no-codesign
