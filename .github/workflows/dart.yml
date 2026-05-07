@@ -5,10 +5,10 @@ on:
 
 jobs:
   build-ios:
-    name: 🎉 iOS Build
-    runs-on: macos-latest
+    name: Build iOS IPA
+    runs-on: macos-15
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -20,6 +20,7 @@ jobs:
 
       - run: flutter clean
       - run: rm -f ios/Podfile.lock
+      - run: rm -rf ios/Pods
       - run: flutter pub get
 
       - run: pod install --repo-update
