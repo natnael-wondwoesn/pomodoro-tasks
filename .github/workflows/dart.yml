@@ -15,8 +15,6 @@ jobs:
           channel: 'stable'
 
       - run: flutter clean
-      - run: rm -rf ios/Pods
-      - run: rm -f ios/Podfile.lock
       - run: flutter pub get
 
       - run: pod install --repo-update
