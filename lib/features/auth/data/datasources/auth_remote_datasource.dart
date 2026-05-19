@@ -2,16 +2,12 @@ import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:pomodoro_tasks/core/constants/app_constants.dart';
 import 'package:pomodoro_tasks/features/auth/data/models/user_model.dart';
 
 abstract class AuthRemoteDatasource {
-  Future<UserModel> signIn({required String email, required String password});
-  Future<UserModel> signUp({
-    required String email,
-    required String password,
-    required String displayName,
-  });
+  Future<UserModel> signInWithGoogle();
   Future<void> signOut();
   Future<UserModel> getCurrentUser();
   Future<String> createPair();
@@ -22,48 +18,41 @@ abstract class AuthRemoteDatasource {
 class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
   final FirebaseAuth firebaseAuth;
   final FirebaseFirestore firestore;
+  final GoogleSignIn googleSignIn;
 
   AuthRemoteDatasourceImpl({
     required this.firebaseAuth,
     required this.firestore,
+    required this.googleSignIn,
   });
 
   @override
-  Future<UserModel> signIn({
-    required String email,
-    required String password,
-  }) async {
-    final credential = await firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    return _getUserModel(credential.user!.uid);
-  }
+  Future<UserModel> signInWithGoogle() async {
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) throw Exception('Google sign-in cancelled');
 
-  @override
-  Future<UserModel> signUp({
-    required String email,
-    required String password,
-    required String displayName,
-  }) async {
-    final credential = await firebaseAuth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
     );
 
-    final user = UserModel(
-      id: credential.user!.uid,
-      email: email,
-      displayName: displayName,
-      createdAt: DateTime.now(),
-    );
+    final userCredential = await firebaseAuth.signInWithCredential(credential);
+    final uid = userCredential.user!.uid;
 
-    await firestore
-        .collection(AppConstants.usersCollection)
-        .doc(user.id)
-        .set(user.toFirestore());
-
-    return user;
+    // Check if user doc exists, create if not
+    final doc = await firestore.collection(AppConstants.usersCollection).doc(uid).get();
+    if (!doc.exists) {
+      final user = UserModel(
+        id: uid,
+        email: userCredential.user!.email ?? '',
+        displayName: userCredential.user!.displayName ?? '',
+        createdAt: DateTime.now(),
+      );
+      await firestore.collection(AppConstants.usersCollection).doc(uid).set(user.toFirestore());
+      return user;
+    }
+    return UserModel.fromFirestore(doc);
   }
 
   @override

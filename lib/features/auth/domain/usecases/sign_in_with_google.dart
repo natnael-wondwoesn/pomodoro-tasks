@@ -4,20 +4,12 @@ import 'package:pomodoro_tasks/core/usecases/usecase.dart';
 import 'package:pomodoro_tasks/features/auth/domain/entities/app_user.dart';
 import 'package:pomodoro_tasks/features/auth/domain/repositories/auth_repository.dart';
 
-class SignIn implements UseCase<AppUser, SignInParams> {
+class SignInWithGoogle implements UseCase<AppUser, NoParams> {
   final AuthRepository repository;
-
-  SignIn(this.repository);
+  SignInWithGoogle(this.repository);
 
   @override
-  Future<Either<Failure, AppUser>> call(SignInParams params) {
-    return repository.signIn(email: params.email, password: params.password);
+  Future<Either<Failure, AppUser>> call(NoParams params) {
+    return repository.signInWithGoogle();
   }
-}
-
-class SignInParams {
-  final String email;
-  final String password;
-
-  const SignInParams({required this.email, required this.password});
 }

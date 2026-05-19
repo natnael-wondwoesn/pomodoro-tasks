@@ -7,6 +7,8 @@ import 'package:pomodoro_tasks/features/timer/presentation/pages/home_page.dart'
 import 'package:pomodoro_tasks/features/tasks/presentation/pages/tasks_page.dart';
 import 'package:pomodoro_tasks/features/timeline/presentation/pages/together_page.dart';
 import 'package:pomodoro_tasks/features/settings/presentation/pages/settings_page.dart';
+import 'package:pomodoro_tasks/features/canvas/presentation/pages/canvas_gallery_page.dart';
+import 'package:pomodoro_tasks/features/canvas/presentation/bloc/canvas_bloc.dart';
 import 'package:pomodoro_tasks/features/quotes/presentation/bloc/quotes_bloc.dart';
 import 'package:pomodoro_tasks/features/tasks/presentation/bloc/tasks_bloc.dart';
 import 'package:pomodoro_tasks/features/timeline/presentation/bloc/timeline_bloc.dart';
@@ -40,11 +42,15 @@ class _AppShellState extends State<AppShell> {
           pairId: widget.user.pairId,
         ));
 
-    // Load tasks
+    // Load tasks and canvases
     if (widget.user.pairId != null) {
       context.read<TasksBloc>().add(TasksLoadRequested(
             pairId: widget.user.pairId!,
             userId: widget.user.id,
+          ));
+
+      context.read<CanvasBloc>().add(CanvasLoadRequested(
+            pairId: widget.user.pairId!,
           ));
 
       // Load partner timeline
@@ -88,6 +94,7 @@ class _AppShellState extends State<AppShell> {
           NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.task_alt_rounded), label: 'Tasks'),
           NavigationDestination(icon: Icon(Icons.people_rounded), label: 'Together'),
+          NavigationDestination(icon: Icon(Icons.brush_rounded), label: 'Canvas'),
           NavigationDestination(icon: Icon(Icons.settings_rounded), label: 'Settings'),
         ],
       ),
@@ -109,6 +116,11 @@ class _AppShellState extends State<AppShell> {
       case 2:
         return TogetherPage(partnerName: 'Partner');
       case 3:
+        return CanvasGalleryPage(
+          pairId: widget.user.pairId ?? '',
+          userId: widget.user.id,
+        );
+      case 4:
         return const SettingsPage();
       default:
         return const SizedBox.shrink();

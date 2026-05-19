@@ -13,6 +13,8 @@ class AppConstants {
   static const String tasksCollection = 'tasks';
   static const String sessionsCollection = 'sessions';
   static const String dailySchedulesCollection = 'daily_schedules';
+  static const String canvasesCollection = 'canvases';
+  static const String strokesCollection = 'strokes';
 
   // Pair code
   static const int pairCodeLength = 6;

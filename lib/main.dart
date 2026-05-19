@@ -14,6 +14,7 @@ import 'package:pomodoro_tasks/features/settings/presentation/bloc/settings_bloc
 import 'package:pomodoro_tasks/features/tasks/presentation/bloc/tasks_bloc.dart';
 import 'package:pomodoro_tasks/features/timeline/presentation/bloc/timeline_bloc.dart';
 import 'package:pomodoro_tasks/features/timer/presentation/bloc/timer_bloc.dart';
+import 'package:pomodoro_tasks/features/canvas/presentation/bloc/canvas_bloc.dart';
 import 'package:pomodoro_tasks/injection_container.dart' as di;
 
 void main() async {
@@ -37,6 +38,7 @@ class PomodoroTasksApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<TasksBloc>()),
         BlocProvider(create: (_) => di.sl<TimelineBloc>()),
         BlocProvider(create: (_) => di.sl<QuotesBloc>()),
+        BlocProvider(create: (_) => di.sl<CanvasBloc>()),
         BlocProvider(create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadRequested())),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(

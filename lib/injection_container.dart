@@ -1,13 +1,13 @@
 import 'package:get_it/get_it.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
-import 'features/auth/domain/usecases/sign_in.dart';
-import 'features/auth/domain/usecases/sign_up.dart';
+import 'features/auth/domain/usecases/sign_in_with_google.dart';
 import 'features/auth/domain/usecases/sign_out.dart';
 import 'features/auth/domain/usecases/get_current_user.dart';
 import 'features/auth/domain/usecases/create_pair.dart';
@@ -44,6 +44,17 @@ import 'features/settings/data/repositories/settings_repository_impl.dart';
 import 'features/settings/domain/repositories/settings_repository.dart';
 import 'features/settings/presentation/bloc/settings_bloc.dart';
 
+import 'package:firebase_storage/firebase_storage.dart';
+import 'features/canvas/data/datasources/canvas_remote_datasource.dart';
+import 'features/canvas/data/repositories/canvas_repository_impl.dart';
+import 'features/canvas/domain/repositories/canvas_repository.dart';
+import 'features/canvas/domain/usecases/get_canvases.dart';
+import 'features/canvas/domain/usecases/create_canvas.dart';
+import 'features/canvas/domain/usecases/delete_canvas.dart';
+import 'features/canvas/domain/usecases/add_stroke.dart';
+import 'features/canvas/domain/usecases/undo_stroke.dart';
+import 'features/canvas/presentation/bloc/canvas_bloc.dart';
+
 final sl = GetIt.instance;
 
 Future<void> init() async {
@@ -52,26 +63,26 @@ Future<void> init() async {
   sl.registerLazySingleton(() => sharedPreferences);
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
+  sl.registerLazySingleton(() => GoogleSignIn());
 
   // Auth
   sl.registerLazySingleton<AuthRemoteDatasource>(
     () => AuthRemoteDatasourceImpl(
       firebaseAuth: sl(),
       firestore: sl(),
+      googleSignIn: sl(),
     ),
   );
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(remoteDatasource: sl()),
   );
-  sl.registerLazySingleton(() => SignIn(sl()));
-  sl.registerLazySingleton(() => SignUp(sl()));
+  sl.registerLazySingleton(() => SignInWithGoogle(sl()));
   sl.registerLazySingleton(() => SignOut(sl()));
   sl.registerLazySingleton(() => GetCurrentUser(sl()));
   sl.registerLazySingleton(() => CreatePair(sl()));
   sl.registerLazySingleton(() => JoinPair(sl()));
   sl.registerFactory(() => AuthBloc(
-        signIn: sl(),
-        signUp: sl(),
+        signInWithGoogle: sl(),
         signOut: sl(),
         getCurrentUser: sl(),
         createPair: sl(),
@@ -131,4 +142,26 @@ Future<void> init() async {
     () => SettingsRepositoryImpl(preferences: sl()),
   );
   sl.registerFactory(() => SettingsBloc(repository: sl()));
+
+  // Canvas
+  sl.registerLazySingleton(() => FirebaseStorage.instance);
+  sl.registerLazySingleton<CanvasRemoteDatasource>(
+    () => CanvasRemoteDatasourceImpl(
+      firestore: sl(),
+      storage: sl(),
+    ),
+  );
+  sl.registerLazySingleton<CanvasRepository>(
+    () => CanvasRepositoryImpl(remoteDatasource: sl()),
+  );
+  sl.registerLazySingleton(() => GetCanvases(sl()));
+  sl.registerLazySingleton(() => CreateCanvas(sl()));
+  sl.registerLazySingleton(() => DeleteCanvas(sl()));
+  sl.registerLazySingleton(() => AddStroke(sl()));
+  sl.registerLazySingleton(() => UndoStroke(sl()));
+  sl.registerFactory(() => CanvasBloc(
+        getCanvases: sl(),
+        createCanvas: sl(),
+        deleteCanvas: sl(),
+      ));
 }
