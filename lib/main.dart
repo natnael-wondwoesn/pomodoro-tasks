@@ -19,10 +19,14 @@ import 'package:pomodoro_tasks/injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  await di.init();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await di.init();
+  } catch (e) {
+    debugPrint('Initialization error: $e');
+  }
   runApp(const PomodoroTasksApp());
 }
 
