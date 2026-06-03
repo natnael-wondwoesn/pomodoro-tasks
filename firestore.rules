@@ -13,7 +13,31 @@ service cloud.firestore {
     }
 
     match /pairs/{pairId} {
-      allow read, write: if request.auth != null &&
+      allow create: if request.auth != null &&
+        request.resource.data.user1Id == request.auth.uid &&
+        request.resource.data.user2Id == null &&
+        request.resource.data.keys().hasOnly(['user1Id', 'user2Id', 'pairCode', 'createdAt']);
+
+      allow read: if request.auth != null &&
+        (resource.data.user1Id == request.auth.uid ||
+         resource.data.user2Id == request.auth.uid ||
+         resource.data.user2Id == null);
+
+      allow update: if request.auth != null &&
+        (
+          resource.data.user1Id == request.auth.uid ||
+          resource.data.user2Id == request.auth.uid ||
+          (
+            resource.data.user2Id == null &&
+            request.resource.data.user1Id == resource.data.user1Id &&
+            request.resource.data.user2Id == request.auth.uid &&
+            request.resource.data.pairCode == resource.data.pairCode &&
+            request.resource.data.createdAt == resource.data.createdAt &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['user2Id'])
+          )
+        );
+
+      allow delete: if request.auth != null &&
         (resource.data.user1Id == request.auth.uid ||
          resource.data.user2Id == request.auth.uid);
 

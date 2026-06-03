@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pomodoro_tasks/core/theme/app_colors.dart';
+import 'package:pomodoro_tasks/core/theme/app_gradients.dart';
 import 'package:pomodoro_tasks/features/canvas/domain/entities/shared_canvas.dart';
 import 'package:pomodoro_tasks/features/canvas/presentation/bloc/canvas_bloc.dart';
 import 'package:pomodoro_tasks/features/canvas/presentation/pages/canvas_detail_page.dart';
@@ -48,12 +50,37 @@ class CanvasGalleryPage extends StatelessWidget {
                         const SizedBox(height: 16),
                         Text(
                           'No canvases yet',
-                          style: Theme.of(context).textTheme.titleMedium,
+                          style: Theme.of(context).textTheme.headlineSmall,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Create a whiteboard or upload a photo',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          'Create a whiteboard or share a photo together!',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: AppGradients.accent,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primaryLight.withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                            ),
+                            onPressed: () => _createWhiteboard(context),
+                            icon: const Icon(Icons.add_rounded, color: Colors.white),
+                            label: const Text('Create Canvas',
+                                style: TextStyle(color: Colors.white)),
+                          ),
                         ),
                       ],
                     ),
@@ -102,6 +129,14 @@ class CanvasGalleryPage extends StatelessWidget {
       ),
     );
   }
+
+  void _createWhiteboard(BuildContext context) {
+    context.read<CanvasBloc>().add(CanvasCreateRequested(
+          pairId: pairId,
+          createdBy: userId,
+          title: '',
+        ));
+  }
 }
 
 class _CanvasCard extends StatelessWidget {
@@ -128,9 +163,9 @@ class _CanvasCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: theme.primaryColor.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -155,7 +190,7 @@ class _CanvasCard extends StatelessWidget {
                     ),
             ),
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -199,6 +234,7 @@ class _CanvasCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete canvas?'),
         content: const Text('This will permanently remove this canvas and all drawings.'),
         actions: [
@@ -230,16 +266,46 @@ class _CreateFab extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FloatingActionButton.small(
-          heroTag: 'upload_photo',
-          onPressed: () => _uploadPhoto(context),
-          child: const Icon(Icons.photo_library_rounded),
+        Container(
+          decoration: BoxDecoration(
+            gradient: AppGradients.accent,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryLight.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: FloatingActionButton.small(
+            heroTag: 'upload_photo',
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            onPressed: () => _uploadPhoto(context),
+            child: const Icon(Icons.photo_library_rounded, color: Colors.white),
+          ),
         ),
         const SizedBox(height: 8),
-        FloatingActionButton(
-          heroTag: 'new_whiteboard',
-          onPressed: () => _createWhiteboard(context),
-          child: const Icon(Icons.draw_rounded),
+        Container(
+          decoration: BoxDecoration(
+            gradient: AppGradients.accent,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryLight.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            heroTag: 'new_whiteboard',
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            onPressed: () => _createWhiteboard(context),
+            child: const Icon(Icons.draw_rounded, color: Colors.white),
+          ),
         ),
       ],
     );

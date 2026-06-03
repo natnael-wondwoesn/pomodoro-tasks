@@ -17,8 +17,10 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   var _initialized = false;
   var _available = true;
+  var _soundEnabled = true;
 
   static const _quoteNotificationBaseId = 900000;
+  static const _timerNotificationId = 800000;
 
   Future<void> init() async {
     if (_initialized || kIsWeb) return;
@@ -29,9 +31,9 @@ class NotificationService {
       '@mipmap/ic_launcher',
     );
     const darwinSettings = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
 
     try {
@@ -74,6 +76,27 @@ class NotificationService {
       _available = false;
       debugPrint('Notification permissions unavailable: $error');
     }
+  }
+
+  void setSoundEnabled(bool enabled) {
+    _soundEnabled = enabled;
+  }
+
+  Future<void> showTimerComplete({
+    required String title,
+    required String body,
+  }) async {
+    if (kIsWeb) return;
+    await init();
+    if (!_available) return;
+
+    await _plugin.show(
+      id: _timerNotificationId,
+      title: title,
+      body: body,
+      notificationDetails: _timerNotificationDetails,
+      payload: 'timer',
+    );
   }
 
   Future<void> scheduleBibleQuoteNotifications() async {
@@ -184,6 +207,29 @@ class NotificationService {
   _QuoteNotification _quoteForSlot(int slot) {
     final index = (DateTime.now().day + slot) % _quoteNotifications.length;
     return _quoteNotifications[index];
+  }
+
+  NotificationDetails get _timerNotificationDetails {
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        'timer_alerts',
+        'Timer alerts',
+        channelDescription: 'Pomodoro timer completion alerts',
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: _soundEnabled,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: _soundEnabled,
+      ),
+      macOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: _soundEnabled,
+      ),
+    );
   }
 
   NotificationDetails get _deadlineNotificationDetails {

@@ -5,15 +5,26 @@ import 'package:pomodoro_tasks/features/tasks/domain/entities/task_entity.dart';
 import 'package:pomodoro_tasks/features/tasks/presentation/bloc/tasks_bloc.dart';
 import 'package:pomodoro_tasks/features/tasks/presentation/widgets/task_list_widget.dart';
 import 'package:pomodoro_tasks/features/timeline/presentation/widgets/partner_panel.dart';
+import 'package:pomodoro_tasks/features/timer/domain/entities/timer_state_entity.dart';
 import 'package:pomodoro_tasks/features/timer/presentation/bloc/timer_bloc.dart';
 import 'package:pomodoro_tasks/features/timer/presentation/widgets/timer_circle.dart';
+import 'package:pomodoro_tasks/features/timer/presentation/widgets/streak_card.dart';
 import 'package:pomodoro_tasks/features/timer/presentation/widgets/timer_controls.dart';
+import 'package:pomodoro_tasks/features/daily_question/presentation/widgets/daily_question_card.dart';
 
 class HomePage extends StatelessWidget {
   final String pairId;
+  final String userId;
+  final String? partnerId;
   final String partnerName;
 
-  const HomePage({super.key, required this.pairId, required this.partnerName});
+  const HomePage({
+    super.key,
+    required this.pairId,
+    required this.userId,
+    this.partnerId,
+    required this.partnerName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +62,8 @@ class HomePage extends StatelessWidget {
               final content = isWide
                   ? _WideDashboard(
                       pairId: pairId,
+                      userId: userId,
+                      partnerId: partnerId,
                       partnerName: partnerName,
                       tasks: tasks,
                       nextTask: nextTask,
@@ -60,6 +73,8 @@ class HomePage extends StatelessWidget {
                     )
                   : _CompactDashboard(
                       pairId: pairId,
+                      userId: userId,
+                      partnerId: partnerId,
                       partnerName: partnerName,
                       tasks: tasks,
                       nextTask: nextTask,
@@ -82,6 +97,8 @@ class HomePage extends StatelessWidget {
 
 class _CompactDashboard extends StatelessWidget {
   final String pairId;
+  final String userId;
+  final String? partnerId;
   final String partnerName;
   final List<TaskEntity> tasks;
   final TaskEntity? nextTask;
@@ -91,6 +108,8 @@ class _CompactDashboard extends StatelessWidget {
 
   const _CompactDashboard({
     required this.pairId,
+    required this.userId,
+    this.partnerId,
     required this.partnerName,
     required this.tasks,
     required this.nextTask,
@@ -105,19 +124,28 @@ class _CompactDashboard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _HomeHeader(tasks: tasks),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _FocusPanel(nextTask: nextTask),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         _ProgressStrip(
           completedCount: completedCount,
           totalCount: tasks.length,
           completedPomodoros: completedPomodoros,
           totalPomodoros: totalPomodoros,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+        StreakCard(pairId: pairId, userId: userId, partnerId: partnerId),
+        const SizedBox(height: 16),
+        DailyQuestionCard(pairId: pairId, userId: userId),
+        const SizedBox(height: 16),
         _NextTasksPanel(pairId: pairId),
-        const SizedBox(height: 14),
-        PartnerPanel(partnerName: partnerName),
+        const SizedBox(height: 16),
+        PartnerPanel(
+                  partnerName: partnerName,
+                  pairId: pairId,
+                  userId: userId,
+                  partnerId: partnerId,
+                ),
       ],
     );
   }
@@ -125,6 +153,8 @@ class _CompactDashboard extends StatelessWidget {
 
 class _WideDashboard extends StatelessWidget {
   final String pairId;
+  final String userId;
+  final String? partnerId;
   final String partnerName;
   final List<TaskEntity> tasks;
   final TaskEntity? nextTask;
@@ -134,6 +164,8 @@ class _WideDashboard extends StatelessWidget {
 
   const _WideDashboard({
     required this.pairId,
+    required this.userId,
+    this.partnerId,
     required this.partnerName,
     required this.tasks,
     required this.nextTask,
@@ -148,7 +180,7 @@ class _WideDashboard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _HomeHeader(tasks: tasks),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -157,24 +189,33 @@ class _WideDashboard extends StatelessWidget {
               child: Column(
                 children: [
                   _FocusPanel(nextTask: nextTask),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   _ProgressStrip(
                     completedCount: completedCount,
                     totalCount: tasks.length,
                     completedPomodoros: completedPomodoros,
                     totalPomodoros: totalPomodoros,
                   ),
+                  const SizedBox(height: 16),
+                  StreakCard(pairId: pairId, userId: userId, partnerId: partnerId),
+                  const SizedBox(height: 16),
+                  DailyQuestionCard(pairId: pairId, userId: userId),
                 ],
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               flex: 2,
               child: Column(
                 children: [
                   _NextTasksPanel(pairId: pairId),
-                  const SizedBox(height: 14),
-                  PartnerPanel(partnerName: partnerName),
+                  const SizedBox(height: 16),
+                  PartnerPanel(
+                    partnerName: partnerName,
+                    pairId: pairId,
+                    userId: userId,
+                    partnerId: partnerId,
+                  ),
                 ],
               ),
             ),
@@ -251,7 +292,24 @@ class _FocusPanel extends StatelessWidget {
           const SizedBox(height: 12),
           BlocBuilder<TimerBloc, TimerBlocState>(
             builder: (context, state) {
-              return TimerCircle(timerState: state.timerState);
+              final emoji = switch (state.timerState.type) {
+                SessionType.work => '\u{1F525} ',
+                SessionType.shortBreak => '\u2615 ',
+                SessionType.longBreak => '\u{1F33F} ',
+              };
+              return Column(
+                children: [
+                  Text(
+                    '$emoji${state.timerState.statusLabel}',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 14,
+                          letterSpacing: 1.5,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  TimerCircle(timerState: state.timerState),
+                ],
+              );
             },
           ),
           const SizedBox(height: 12),
@@ -278,11 +336,11 @@ class _CurrentTaskStrip extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
             Icon(Icons.flag_rounded, color: color, size: 20),
@@ -334,16 +392,16 @@ class _ProgressStrip extends StatelessWidget {
         Expanded(
           child: _MetricTile(
             icon: Icons.check_circle_rounded,
-            label: 'Tasks',
+            label: '\u{1F3AF} Tasks',
             value: '$completedCount/$totalCount',
             color: AppColors.partnerLight,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Expanded(
           child: _MetricTile(
             icon: Icons.timer_rounded,
-            label: 'Pomodoros',
+            label: '\u{1F345} Pomodoros',
             value: '$completedPomodoros/$totalPomodoros',
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -393,10 +451,16 @@ class _DashboardPanel extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Padding(padding: const EdgeInsets.all(14), child: child),
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pomodoro_tasks/core/notifications/notification_service.dart';
 import 'package:pomodoro_tasks/features/settings/domain/entities/app_settings.dart';
 import 'package:pomodoro_tasks/features/settings/domain/repositories/settings_repository.dart';
 
@@ -19,6 +20,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     Emitter<SettingsState> emit,
   ) async {
     final settings = await repository.getSettings();
+    NotificationService.instance.setSoundEnabled(settings.soundEnabled);
     emit(SettingsState(settings: settings, isLoaded: true));
   }
 
@@ -26,6 +28,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     SettingsUpdated event,
     Emitter<SettingsState> emit,
   ) async {
+    NotificationService.instance.setSoundEnabled(event.settings.soundEnabled);
     emit(SettingsState(settings: event.settings, isLoaded: true));
     await repository.saveSettings(event.settings);
   }

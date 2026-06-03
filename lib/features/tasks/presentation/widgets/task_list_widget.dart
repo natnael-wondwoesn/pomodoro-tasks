@@ -21,24 +21,24 @@ class TaskListWidget extends StatelessWidget {
         final tasks = state.tasks;
         if (tasks.isEmpty) {
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
+            padding: const EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.task_alt_rounded,
-                    size: 34,
-                    color: Theme.of(context).colorScheme.primary,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Text(
                     'No tasks yet',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Add one clear next step.',
+                    'What will you focus on today?',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
@@ -118,7 +118,7 @@ class TaskListWidget extends StatelessWidget {
             : Theme.of(context).brightness == Brightness.light
             ? Colors.white.withValues(alpha: 0.5)
             : Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: isActive
             ? Border.all(
                 color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
@@ -182,7 +182,14 @@ class TaskListWidget extends StatelessWidget {
           color: task.status == TaskStatus.inProgress
               ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
               : Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -234,7 +241,7 @@ class TaskListWidget extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '${task.completedPomodoros}/${task.estimatedPomodoros}',

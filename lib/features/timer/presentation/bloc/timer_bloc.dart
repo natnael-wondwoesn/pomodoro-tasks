@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pomodoro_tasks/core/notifications/notification_service.dart';
+import 'package:pomodoro_tasks/core/services/streak_service.dart';
 import 'package:pomodoro_tasks/features/timer/domain/entities/pomodoro_config.dart';
 import 'package:pomodoro_tasks/features/timer/domain/entities/timer_state_entity.dart';
 import 'package:pomodoro_tasks/features/timer/domain/usecases/start_session.dart';
@@ -134,6 +136,32 @@ class TimerBloc extends Bloc<TimerEvent, TimerBlocState> {
 
   void _advanceToNext(Emitter<TimerBlocState> emit) {
     final current = state.timerState;
+
+    // Notify user that the session completed
+    final title = switch (current.type) {
+      SessionType.work => 'Focus session complete!',
+      SessionType.shortBreak => 'Break is over!',
+      SessionType.longBreak => 'Long break is over!',
+    };
+    final body = switch (current.type) {
+      SessionType.work =>
+        'Round ${current.currentRound}/${current.totalRounds} done. Time for a break!',
+      SessionType.shortBreak => 'Ready to focus again?',
+      SessionType.longBreak => 'Recharged! Start a new cycle.',
+    };
+    NotificationService.instance.showTimerComplete(
+      title: title,
+      body: body,
+    );
+
+    // Update streak on work session completion
+    if (current.type == SessionType.work && _pairId != null && _userId != null) {
+      StreakService.instance.recordPomodoroCompleted(
+        pairId: _pairId!,
+        userId: _userId!,
+      );
+    }
+
     SessionType nextType;
     int nextRound = current.currentRound;
 

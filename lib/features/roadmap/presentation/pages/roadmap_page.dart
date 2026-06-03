@@ -7,6 +7,7 @@ import 'package:game_levels_scrolling_map/model/point_model.dart';
 import 'package:intl/intl.dart';
 import 'package:pomodoro_tasks/core/constants/app_constants.dart';
 import 'package:pomodoro_tasks/core/notifications/notification_service.dart';
+import 'package:pomodoro_tasks/core/theme/app_gradients.dart';
 import 'package:pomodoro_tasks/features/roadmap/data/models/roadmap_goal_model.dart';
 import 'package:pomodoro_tasks/features/roadmap/domain/entities/roadmap_goal.dart';
 
@@ -29,7 +30,7 @@ class RoadmapPage extends StatefulWidget {
 class _RoadmapPageState extends State<RoadmapPage> {
   _RoadmapKind? _selectedKind;
 
-  static const double _mapWidth = 620;
+  static const double _mapWidth = 640;
   static const double _minMapHeight = 1280;
 
   @override
@@ -244,7 +245,7 @@ class _RoadmapPageState extends State<RoadmapPage> {
   }
 
   double _mapHeightFor(int levelCount) {
-    return math.max(_minMapHeight, 240 + math.max(0, levelCount - 1) * 185);
+    return math.max(_minMapHeight, 240 + math.max(0, levelCount - 1) * 200);
   }
 
   _RoadmapStatus _statusFor(RoadmapGoal goal, bool currentAssigned) {
@@ -702,38 +703,40 @@ class _RoadmapSelectorTile extends StatelessWidget {
 
     return Material(
       color: colorScheme.surface.withValues(alpha: enabled ? 0.82 : 0.48),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Container(
-                width: 54,
-                height: 54,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colorScheme.primary.withValues(
-                    alpha: enabled ? 0.18 : 0.08,
-                  ),
+                  gradient: enabled ? AppGradients.accent : null,
+                  color: enabled
+                      ? null
+                      : colorScheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   config.icon,
+                  size: 28,
                   color: enabled
-                      ? colorScheme.primary
+                      ? Colors.white
                       : Theme.of(context).disabledColor,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       config.title,
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -1108,11 +1111,6 @@ class _RoadmapNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (level.status) {
-      _RoadmapStatus.done => const Color(0xFF4A9F68),
-      _RoadmapStatus.current => Theme.of(context).colorScheme.primary,
-      _RoadmapStatus.locked => Theme.of(context).disabledColor,
-    };
     final foreground = level.status == _RoadmapStatus.locked
         ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.48)
         : Colors.white;
@@ -1124,18 +1122,25 @@ class _RoadmapNode extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 76,
-            height: 76,
+            width: 84,
+            height: 84,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: color,
+              gradient: switch (level.status) {
+                _RoadmapStatus.done => AppGradients.partner,
+                _RoadmapStatus.current => AppGradients.accent,
+                _RoadmapStatus.locked => null,
+              },
+              color: level.status == _RoadmapStatus.locked
+                  ? Theme.of(context).disabledColor.withValues(alpha: 0.15)
+                  : null,
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.92),
-                width: 4,
+                width: 3,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -1148,12 +1153,12 @@ class _RoadmapNode extends StatelessWidget {
                 _RoadmapStatus.locked => Icons.lock_rounded,
               },
               color: foreground,
-              size: 30,
+              size: 32,
             ),
           ),
           const SizedBox(height: 6),
           SizedBox(
-            width: 130,
+            width: 140,
             child: Text(
               level.title,
               textAlign: TextAlign.center,
@@ -1187,25 +1192,25 @@ class _CurrentGoalBar extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        gradient: AppGradients.accent,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Colors.white.withValues(alpha: 0.25),
               foregroundColor: Colors.white,
-              child: Text('${current.number}'),
+              child: Text('\u{1F3AF} ${current.number}',
+                  style: const TextStyle(fontSize: 12)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1217,7 +1222,10 @@ class _CurrentGoalBar extends StatelessWidget {
                     current.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   if (current.description != null &&
                       current.description!.isNotEmpty)
@@ -1225,24 +1233,38 @@ class _CurrentGoalBar extends StatelessWidget {
                       current.description!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
                     ),
                   if (current.deadlineAt != null)
                     Text(
                       'Due ${DateFormat('MMM d, h:mm a').format(current.deadlineAt!)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
                     ),
                   const SizedBox(height: 8),
-                  LinearProgressIndicator(value: progress.clamp(0, 1)),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress.clamp(0, 1),
+                      minHeight: 6,
+                      backgroundColor: Colors.white.withValues(alpha: 0.25),
+                      valueColor: const AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
             Text(
               '${current.completedPomodoros}/${current.estimatedPomodoros}',
-              style: Theme.of(context).textTheme.labelLarge,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Colors.white,
+                  ),
             ),
           ],
         ),
