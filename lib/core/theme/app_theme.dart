@@ -19,14 +19,15 @@ class AppTheme {
         textTheme: _buildTextTheme(AppColors.textPrimaryLight, AppColors.textSecondaryLight),
         cardTheme: CardThemeData(
           color: AppColors.surfaceLight.withValues(alpha: 0.8),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+          shadowColor: AppColors.primaryLight.withValues(alpha: 0.15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white.withValues(alpha: 0.6),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -35,7 +36,7 @@ class AppTheme {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryLight,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
         ),
@@ -61,14 +62,15 @@ class AppTheme {
         textTheme: _buildTextTheme(AppColors.textPrimaryDark, AppColors.textSecondaryDark),
         cardTheme: CardThemeData(
           color: AppColors.surfaceDark.withValues(alpha: 0.6),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+          shadowColor: Colors.black.withValues(alpha: 0.3),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white.withValues(alpha: 0.06),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -77,7 +79,7 @@ class AppTheme {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryDark,
             foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
         ),
@@ -92,7 +94,7 @@ class AppTheme {
   static TextTheme _buildTextTheme(Color primary, Color secondary) {
     return TextTheme(
       headlineLarge: GoogleFonts.playfairDisplay(
-        fontSize: 28,
+        fontSize: 32,
         fontWeight: FontWeight.bold,
         color: primary,
       ),
