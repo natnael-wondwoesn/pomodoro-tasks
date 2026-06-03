@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:pomodoro_tasks/firebase_options.dart';
 import 'package:pomodoro_tasks/app_shell.dart';
+import 'package:pomodoro_tasks/core/notifications/notification_service.dart';
 import 'package:pomodoro_tasks/core/theme/app_theme.dart';
 import 'package:pomodoro_tasks/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:pomodoro_tasks/features/auth/presentation/pages/login_page.dart';
@@ -24,6 +25,8 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     await di.init();
+    await NotificationService.instance.init();
+    await NotificationService.instance.scheduleBibleQuoteNotifications();
   } catch (e) {
     debugPrint('Initialization error: $e');
   }
@@ -37,13 +40,17 @@ class PomodoroTasksApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => di.sl<AuthBloc>()..add(AuthCheckRequested())),
+        BlocProvider(
+          create: (_) => di.sl<AuthBloc>()..add(AuthCheckRequested()),
+        ),
         BlocProvider(create: (_) => di.sl<TimerBloc>()),
         BlocProvider(create: (_) => di.sl<TasksBloc>()),
         BlocProvider(create: (_) => di.sl<TimelineBloc>()),
         BlocProvider(create: (_) => di.sl<QuotesBloc>()),
         BlocProvider(create: (_) => di.sl<CanvasBloc>()),
-        BlocProvider(create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadRequested())),
+        BlocProvider(
+          create: (_) => di.sl<SettingsBloc>()..add(SettingsLoadRequested()),
+        ),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, settingsState) {

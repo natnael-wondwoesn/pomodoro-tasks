@@ -15,25 +15,69 @@ class TasksPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('My Tasks', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: TaskListWidget(pairId: pairId),
-              ),
+      body: BlocBuilder<TasksBloc, TasksState>(
+        builder: (context, state) {
+          final tasks = state is TasksLoaded
+              ? state.tasks
+              : const <TaskEntity>[];
+          final doneCount = tasks
+              .where((task) => task.status == TaskStatus.done)
+              .length;
+          final activeCount = tasks.length - doneCount;
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'My Tasks',
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            activeCount == 0
+                                ? 'Nothing active. Add a task when you are ready.'
+                                : '$activeCount active, $doneCount done',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton.filled(
+                      onPressed: () => _showAddTaskDialog(context),
+                      icon: const Icon(Icons.add_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                if (tasks.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      minHeight: 8,
+                      value: doneCount / tasks.length,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surface.withValues(alpha: 0.72),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: TaskListWidget(pairId: pairId),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTaskDialog(context),
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+          );
+        },
       ),
     );
   }
@@ -59,7 +103,9 @@ class TasksPage extends StatelessWidget {
               const SizedBox(height: 12),
               TextField(
                 controller: descController,
-                decoration: const InputDecoration(hintText: 'Description (optional)'),
+                decoration: const InputDecoration(
+                  hintText: 'Description (optional)',
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -88,18 +134,25 @@ class TasksPage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 if (titleController.text.isNotEmpty) {
-                  final bloc = BlocProvider.of<TasksBloc>(dialogContext, listen: false);
-                  bloc.add(TaskAddRequested(
-                    pairId: pairId,
-                    task: TaskEntity(
-                      id: const Uuid().v4(),
-                      title: titleController.text,
-                      description: descController.text.isEmpty ? null : descController.text,
-                      estimatedPomodoros: pomodoros,
-                      ownerId: userId,
-                      createdAt: DateTime.now(),
+                  final bloc = BlocProvider.of<TasksBloc>(
+                    dialogContext,
+                    listen: false,
+                  );
+                  bloc.add(
+                    TaskAddRequested(
+                      pairId: pairId,
+                      task: TaskEntity(
+                        id: const Uuid().v4(),
+                        title: titleController.text,
+                        description: descController.text.isEmpty
+                            ? null
+                            : descController.text,
+                        estimatedPomodoros: pomodoros,
+                        ownerId: userId,
+                        createdAt: DateTime.now(),
+                      ),
                     ),
-                  ));
+                  );
                   Navigator.pop(dialogContext);
                 }
               },

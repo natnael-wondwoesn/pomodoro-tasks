@@ -20,11 +20,30 @@ class TaskListWidget extends StatelessWidget {
 
         final tasks = state.tasks;
         if (tasks.isEmpty) {
-          return Center(
-            child: Text(
-              'No tasks yet.\nTap + to add one.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.task_alt_rounded,
+                    size: 34,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'No tasks yet',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Add one clear next step.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -39,11 +58,13 @@ class TaskListWidget extends StatelessWidget {
           itemCount: tasks.length,
           onReorder: (oldIndex, newIndex) {
             if (newIndex > oldIndex) newIndex--;
-            context.read<TasksBloc>().add(TaskReorderRequested(
-                  pairId: pairId,
-                  oldIndex: oldIndex,
-                  newIndex: newIndex,
-                ));
+            context.read<TasksBloc>().add(
+              TaskReorderRequested(
+                pairId: pairId,
+                oldIndex: oldIndex,
+                newIndex: newIndex,
+              ),
+            );
           },
           itemBuilder: (context, index) {
             return _buildTaskTile(context, tasks[index]);
@@ -54,10 +75,35 @@ class TaskListWidget extends StatelessWidget {
   }
 
   Widget _buildCompactList(BuildContext context, List<TaskEntity> tasks) {
-    final displayTasks = tasks.take(5).toList();
+    final displayTasks = [...tasks]
+      ..sort((a, b) {
+        final statusCompare = _statusRank(
+          a.status,
+        ).compareTo(_statusRank(b.status));
+        if (statusCompare != 0) return statusCompare;
+        return a.order.compareTo(b.order);
+      });
+    final openTasks = displayTasks
+        .where((task) => task.status != TaskStatus.done)
+        .take(4)
+        .toList();
+    final visibleTasks = openTasks.isEmpty
+        ? displayTasks.take(3).toList()
+        : openTasks;
+
     return Column(
-      children: displayTasks.map((task) => _buildCompactTile(context, task)).toList(),
+      children: visibleTasks
+          .map((task) => _buildCompactTile(context, task))
+          .toList(),
     );
+  }
+
+  int _statusRank(TaskStatus status) {
+    return switch (status) {
+      TaskStatus.inProgress => 0,
+      TaskStatus.todo => 1,
+      TaskStatus.done => 2,
+    };
   }
 
   Widget _buildCompactTile(BuildContext context, TaskEntity task) {
@@ -70,11 +116,13 @@ class TaskListWidget extends StatelessWidget {
         color: isActive
             ? Theme.of(context).primaryColor.withValues(alpha: 0.15)
             : Theme.of(context).brightness == Brightness.light
-                ? Colors.white.withValues(alpha: 0.5)
-                : Colors.white.withValues(alpha: 0.05),
+            ? Colors.white.withValues(alpha: 0.5)
+            : Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: isActive
-            ? Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.3))
+            ? Border.all(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+              )
             : null,
       ),
       child: Row(
@@ -83,8 +131,8 @@ class TaskListWidget extends StatelessWidget {
             task.status == TaskStatus.done
                 ? Icons.check_circle
                 : task.status == TaskStatus.inProgress
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
+                ? Icons.radio_button_checked
+                : Icons.radio_button_unchecked,
             size: 16,
             color: task.status == TaskStatus.done
                 ? AppColors.partnerLight
@@ -95,10 +143,10 @@ class TaskListWidget extends StatelessWidget {
             child: Text(
               task.title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    decoration: task.status == TaskStatus.done
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
+                decoration: task.status == TaskStatus.done
+                    ? TextDecoration.lineThrough
+                    : null,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -123,7 +171,9 @@ class TaskListWidget extends StatelessWidget {
         child: const Icon(Icons.delete, color: Colors.red),
       ),
       onDismissed: (_) {
-        context.read<TasksBloc>().add(TaskDeleteRequested(pairId: pairId, taskId: task.id));
+        context.read<TasksBloc>().add(
+          TaskDeleteRequested(pairId: pairId, taskId: task.id),
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -141,10 +191,12 @@ class TaskListWidget extends StatelessWidget {
                 final newStatus = task.status == TaskStatus.done
                     ? TaskStatus.todo
                     : TaskStatus.done;
-                context.read<TasksBloc>().add(TaskUpdateRequested(
-                      pairId: pairId,
-                      task: task.copyWith(status: newStatus),
-                    ));
+                context.read<TasksBloc>().add(
+                  TaskUpdateRequested(
+                    pairId: pairId,
+                    task: task.copyWith(status: newStatus),
+                  ),
+                );
               },
               child: Icon(
                 task.status == TaskStatus.done
@@ -163,10 +215,10 @@ class TaskListWidget extends StatelessWidget {
                   Text(
                     task.title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          decoration: task.status == TaskStatus.done
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
+                      decoration: task.status == TaskStatus.done
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
                   ),
                   if (task.description != null && task.description!.isNotEmpty)
                     Text(

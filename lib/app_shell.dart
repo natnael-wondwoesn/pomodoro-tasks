@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pomodoro_tasks/core/notifications/notification_service.dart';
 import 'package:pomodoro_tasks/core/theme/app_gradients.dart';
 import 'package:pomodoro_tasks/features/auth/domain/entities/app_user.dart';
 import 'package:pomodoro_tasks/features/quotes/presentation/widgets/quote_card.dart';
 import 'package:pomodoro_tasks/features/timer/presentation/pages/home_page.dart';
 import 'package:pomodoro_tasks/features/tasks/presentation/pages/tasks_page.dart';
 import 'package:pomodoro_tasks/features/timeline/presentation/pages/together_page.dart';
+import 'package:pomodoro_tasks/features/roadmap/presentation/pages/roadmap_page.dart';
 import 'package:pomodoro_tasks/features/settings/presentation/pages/settings_page.dart';
 import 'package:pomodoro_tasks/features/canvas/presentation/pages/canvas_gallery_page.dart';
 import 'package:pomodoro_tasks/features/canvas/presentation/bloc/canvas_bloc.dart';
@@ -37,28 +39,32 @@ class _AppShellState extends State<AppShell> {
     context.read<QuotesBloc>().add(const QuotesLoadDaily());
 
     // Set user for timer
-    context.read<TimerBloc>().add(TimerUserSet(
-          userId: widget.user.id,
-          pairId: widget.user.pairId,
-        ));
+    context.read<TimerBloc>().add(
+      TimerUserSet(userId: widget.user.id, pairId: widget.user.pairId),
+    );
 
     // Load tasks and canvases
     if (widget.user.pairId != null) {
-      context.read<TasksBloc>().add(TasksLoadRequested(
-            pairId: widget.user.pairId!,
-            userId: widget.user.id,
-          ));
+      context.read<TasksBloc>().add(
+        TasksLoadRequested(pairId: widget.user.pairId!, userId: widget.user.id),
+      );
 
-      context.read<CanvasBloc>().add(CanvasLoadRequested(
-            pairId: widget.user.pairId!,
-          ));
+      context.read<CanvasBloc>().add(
+        CanvasLoadRequested(pairId: widget.user.pairId!),
+      );
+
+      NotificationService.instance.syncRoadmapDeadlineNotifications(
+        widget.user.pairId!,
+      );
 
       // Load partner timeline
       if (widget.user.partnerId != null) {
-        context.read<TimelineBloc>().add(TimelineLoadRequested(
-              pairId: widget.user.pairId!,
-              partnerId: widget.user.partnerId!,
-            ));
+        context.read<TimelineBloc>().add(
+          TimelineLoadRequested(
+            pairId: widget.user.pairId!,
+            partnerId: widget.user.partnerId!,
+          ),
+        );
       }
     }
   }
@@ -70,7 +76,9 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: isLight ? AppGradients.backgroundLight : AppGradients.backgroundDark,
+          gradient: isLight
+              ? AppGradients.backgroundLight
+              : AppGradients.backgroundDark,
         ),
         child: SafeArea(
           child: Column(
@@ -92,10 +100,26 @@ class _AppShellState extends State<AppShell> {
             : Colors.black.withValues(alpha: 0.3),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.task_alt_rounded), label: 'Tasks'),
-          NavigationDestination(icon: Icon(Icons.people_rounded), label: 'Together'),
-          NavigationDestination(icon: Icon(Icons.brush_rounded), label: 'Canvas'),
-          NavigationDestination(icon: Icon(Icons.settings_rounded), label: 'Settings'),
+          NavigationDestination(
+            icon: Icon(Icons.task_alt_rounded),
+            label: 'Tasks',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_rounded),
+            label: 'Together',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.map_rounded),
+            label: 'Roadmap',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.brush_rounded),
+            label: 'Canvas',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_rounded),
+            label: 'Settings',
+          ),
         ],
       ),
     );
@@ -116,11 +140,17 @@ class _AppShellState extends State<AppShell> {
       case 2:
         return TogetherPage(partnerName: 'Partner');
       case 3:
+        return RoadmapPage(
+          pairId: widget.user.pairId ?? '',
+          userId: widget.user.id,
+          partnerId: widget.user.partnerId,
+        );
+      case 4:
         return CanvasGalleryPage(
           pairId: widget.user.pairId ?? '',
           userId: widget.user.id,
         );
-      case 4:
+      case 5:
         return const SettingsPage();
       default:
         return const SizedBox.shrink();
