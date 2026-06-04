@@ -277,7 +277,9 @@ class _RoadmapPageState extends State<RoadmapPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      constraints: const BoxConstraints(maxHeight: 380),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+      ),
       builder: (sheetContext) {
         return _AddRoadmapGoalSheet(pairId: widget.pairId, config: config);
       },
@@ -292,6 +294,17 @@ class _RoadmapPageState extends State<RoadmapPage> {
           title: Text(level.title),
           content: Text(_goalActionMessage(level)),
           actions: [
+            TextButton.icon(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _confirmDeleteGoal(context, level);
+              },
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Delete'),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+            ),
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Close'),
@@ -319,6 +332,41 @@ class _RoadmapPageState extends State<RoadmapPage> {
     );
   }
 
+  Future<void> _confirmDeleteGoal(
+    BuildContext context,
+    _RoadmapLevel level,
+  ) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete goal?'),
+          content: Text(
+            'Remove "${level.title}" from this roadmap. This cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Delete'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true || !context.mounted) return;
+    await _deleteGoal(context, level);
+  }
+
   String _goalActionMessage(_RoadmapLevel level) {
     return switch (level.status) {
       _RoadmapStatus.done => 'This goal is already complete.',
@@ -327,6 +375,28 @@ class _RoadmapPageState extends State<RoadmapPage> {
       _RoadmapStatus.current =>
         'Mark this goal done or skip it to unlock the next goal.',
     };
+  }
+
+  Future<void> _deleteGoal(BuildContext context, _RoadmapLevel level) async {
+    try {
+      await _goalsRef(widget.pairId, level.roadmapId).doc(level.id).delete();
+      await NotificationService.instance.cancelRoadmapDeadline(
+        pairId: widget.pairId,
+        roadmapId: level.roadmapId,
+        goalId: level.id,
+      );
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Roadmap goal deleted.')));
+    } catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete roadmap goal: $error')),
+      );
+    }
   }
 
   Future<void> _completeGoal(
@@ -399,9 +469,11 @@ class _AddRoadmapGoalSheetState extends State<_AddRoadmapGoalSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1209,8 +1281,10 @@ class _CurrentGoalBar extends StatelessWidget {
             CircleAvatar(
               backgroundColor: Colors.white.withValues(alpha: 0.25),
               foregroundColor: Colors.white,
-              child: Text('\u{1F3AF} ${current.number}',
-                  style: const TextStyle(fontSize: 12)),
+              child: Text(
+                '\u{1F3AF} ${current.number}',
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1223,9 +1297,9 @@ class _CurrentGoalBar extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (current.description != null &&
                       current.description!.isNotEmpty)
@@ -1234,8 +1308,8 @@ class _CurrentGoalBar extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
                     ),
                   if (current.deadlineAt != null)
                     Text(
@@ -1243,8 +1317,8 @@ class _CurrentGoalBar extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
                     ),
                   const SizedBox(height: 8),
                   ClipRRect(
@@ -1262,9 +1336,9 @@ class _CurrentGoalBar extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               '${current.completedPomodoros}/${current.estimatedPomodoros}',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: Colors.white),
             ),
           ],
         ),

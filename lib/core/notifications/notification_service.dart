@@ -175,6 +175,20 @@ class NotificationService {
     );
   }
 
+  Future<void> cancelRoadmapDeadline({
+    required String pairId,
+    required String roadmapId,
+    required String goalId,
+  }) async {
+    if (kIsWeb) return;
+    await init();
+    if (!_available) return;
+
+    await _plugin.cancel(
+      id: _deadlineNotificationId(pairId, roadmapId, goalId),
+    );
+  }
+
   int _deadlineNotificationId(String pairId, String roadmapId, String goalId) {
     return 100000 + _stableHash('$pairId:$roadmapId:$goalId') % 700000;
   }
