@@ -9,6 +9,9 @@ on:
 permissions:
   contents: write
 
+env:
+  RELEASE_VERSION: 1.0.${{ github.run_number }}
+
 jobs:
   build-ios:
     name: Build iOS IPA
@@ -32,7 +35,7 @@ jobs:
       - run: pod install --repo-update
         working-directory: ios
 
-      - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --release --no-codesign --build-name "$RELEASE_VERSION" --build-number "${{ github.run_number }}"
 
       - run: mkdir Payload
         working-directory: build/ios/iphoneos
@@ -41,14 +44,16 @@ jobs:
         working-directory: build/ios/iphoneos
 
       - name: Zip output
-        run: zip -qq -r -9 FlutterIpaExport.ipa Payload
+        run: zip -qq -r -9 PomodoroTasks-${RELEASE_VERSION}.ipa Payload
         working-directory: build/ios/iphoneos
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/ios/iphoneos/FlutterIpaExport.ipa
-          tag: v1.0
-          overwrite: true
-          body: "This is first release"
+          file: build/ios/iphoneos/PomodoroTasks-${{ env.RELEASE_VERSION }}.ipa
+          asset_name: PomodoroTasks-${{ env.RELEASE_VERSION }}.ipa
+          tag: v${{ env.RELEASE_VERSION }}
+          release_name: Pomodoro Tasks v${{ env.RELEASE_VERSION }}
+          overwrite: false
+          body: "Automated iOS IPA build for v${{ env.RELEASE_VERSION }}."
