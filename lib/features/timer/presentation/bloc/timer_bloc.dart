@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pomodoro_tasks/core/notifications/notification_service.dart';
 import 'package:pomodoro_tasks/core/services/streak_service.dart';
@@ -32,6 +33,7 @@ class TimerBloc extends Bloc<TimerEvent, TimerBlocState> {
     on<TimerTicked>(_onTicked);
     on<TimerConfigUpdated>(_onConfigUpdated);
     on<TimerSkipped>(_onSkipped);
+    on<TimerTaskLinked>(_onTaskLinked);
     on<TimerUserSet>(_onUserSet);
   }
 
@@ -39,6 +41,17 @@ class TimerBloc extends Bloc<TimerEvent, TimerBlocState> {
   Future<void> close() {
     _ticker?.cancel();
     return super.close();
+  }
+
+  void _onTaskLinked(TimerTaskLinked event, Emitter<TimerBlocState> emit) {
+    if (state.timerState.status != TimerStatus.idle) return;
+    emit(state.copyWith(
+      timerState: state.timerState.copyWith(
+        linkedTaskId: event.taskId,
+        totalRounds: event.totalRounds,
+        currentRound: 1,
+      ),
+    ));
   }
 
   void _onUserSet(TimerUserSet event, Emitter<TimerBlocState> emit) {
@@ -155,7 +168,9 @@ class TimerBloc extends Bloc<TimerEvent, TimerBlocState> {
     );
 
     // Update streak on work session completion
+    debugPrint('TimerBloc._advanceToNext: type=${current.type} pairId=$_pairId userId=$_userId');
     if (current.type == SessionType.work && _pairId != null && _userId != null) {
+      debugPrint('TimerBloc: Recording pomodoro for streak');
       StreakService.instance.recordPomodoroCompleted(
         pairId: _pairId!,
         userId: _userId!,

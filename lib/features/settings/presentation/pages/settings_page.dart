@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:pomodoro_tasks/core/theme/app_gradients.dart';
 import 'package:pomodoro_tasks/features/settings/domain/entities/app_settings.dart'
     as settings_entity;
@@ -25,7 +26,10 @@ class SettingsPage extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     IconButton(
@@ -54,14 +58,20 @@ class SettingsPage extends StatelessWidget {
                             'Theme',
                             settings.themeMode,
                             settings_entity.ThemeMode.values,
-                            (value) => _update(context, settings.copyWith(themeMode: value)),
+                            (value) => _update(
+                              context,
+                              settings.copyWith(themeMode: value),
+                            ),
                           ),
                           _buildDropdown<settings_entity.LayoutDensity>(
                             context,
                             'Density',
                             settings.layoutDensity,
                             settings_entity.LayoutDensity.values,
-                            (value) => _update(context, settings.copyWith(layoutDensity: value)),
+                            (value) => _update(
+                              context,
+                              settings.copyWith(layoutDensity: value),
+                            ),
                           ),
                           _buildSlider(
                             context,
@@ -69,7 +79,10 @@ class SettingsPage extends StatelessWidget {
                             settings.fontSize,
                             0.8,
                             1.4,
-                            (value) => _update(context, settings.copyWith(fontSize: value)),
+                            (value) => _update(
+                              context,
+                              settings.copyWith(fontSize: value),
+                            ),
                           ),
                         ]),
 
@@ -81,7 +94,11 @@ class SettingsPage extends StatelessWidget {
                             TimerMode.values,
                             (value) => _update(
                               context,
-                              settings.copyWith(timerConfig: settings.timerConfig.copyWith(mode: value)),
+                              settings.copyWith(
+                                timerConfig: settings.timerConfig.copyWith(
+                                  mode: value,
+                                ),
+                              ),
                             ),
                           ),
                           _buildDurationRow(
@@ -105,7 +122,9 @@ class SettingsPage extends StatelessWidget {
                               context,
                               settings.copyWith(
                                 timerConfig: settings.timerConfig.copyWith(
-                                  shortBreakDuration: Duration(minutes: minutes),
+                                  shortBreakDuration: Duration(
+                                    minutes: minutes,
+                                  ),
                                 ),
                               ),
                             ),
@@ -131,8 +150,12 @@ class SettingsPage extends StatelessWidget {
                             'Language',
                             settings.quoteLanguage,
                             ['en', 'am'],
-                            (value) => _update(context, settings.copyWith(quoteLanguage: value)),
-                            labelBuilder: (v) => v == 'en' ? 'English' : 'Amharic',
+                            (value) => _update(
+                              context,
+                              settings.copyWith(quoteLanguage: value),
+                            ),
+                            labelBuilder: (v) =>
+                                v == 'en' ? 'English' : 'Amharic',
                           ),
                         ]),
 
@@ -140,8 +163,10 @@ class SettingsPage extends StatelessWidget {
                           SwitchListTile(
                             title: const Text('Sound'),
                             value: settings.soundEnabled,
-                            onChanged: (value) =>
-                                _update(context, settings.copyWith(soundEnabled: value)),
+                            onChanged: (value) => _update(
+                              context,
+                              settings.copyWith(soundEnabled: value),
+                            ),
                           ),
                         ]),
                       ],
@@ -156,7 +181,11 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(BuildContext context, String title, List<Widget> children) {
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -199,10 +228,14 @@ class SettingsPage extends StatelessWidget {
           DropdownButton<T>(
             value: value,
             items: items
-                .map((e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(labelBuilder?.call(e) ?? e.toString().split('.').last),
-                    ))
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(
+                      labelBuilder?.call(e) ?? e.toString().split('.').last,
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (v) {
               if (v != null) onChanged(v);
@@ -239,21 +272,59 @@ class SettingsPage extends StatelessWidget {
     int minutes,
     ValueChanged<int> onChanged,
   ) {
+    const minMinutes = 1;
+    const maxMinutes = 240;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyLarge),
+          Expanded(
+            child: Text(label, style: Theme.of(context).textTheme.bodyLarge),
+          ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                onPressed: minutes > 1 ? () => onChanged(minutes - 1) : null,
+                onPressed: minutes > minMinutes
+                    ? () => onChanged(minutes - 1)
+                    : null,
                 icon: const Icon(Icons.remove_circle_outline, size: 20),
               ),
-              Text('$minutes min'),
+              SizedBox(
+                width: 92,
+                child: TextFormField(
+                  key: ValueKey('$label-$minutes'),
+                  initialValue: minutes.toString(),
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    suffixText: 'min',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 10,
+                    ),
+                  ),
+                  onFieldSubmitted: (value) => _submitMinutes(
+                    context,
+                    value,
+                    minutes,
+                    onChanged,
+                    minMinutes,
+                    maxMinutes,
+                  ),
+                  onEditingComplete: () => FocusScope.of(context).unfocus(),
+                ),
+              ),
               IconButton(
-                onPressed: () => onChanged(minutes + 1),
+                onPressed: minutes < maxMinutes
+                    ? () => onChanged(minutes + 1)
+                    : null,
                 icon: const Icon(Icons.add_circle_outline, size: 20),
               ),
             ],
@@ -261,6 +332,25 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _submitMinutes(
+    BuildContext context,
+    String value,
+    int fallback,
+    ValueChanged<int> onChanged,
+    int min,
+    int max,
+  ) {
+    final parsed = int.tryParse(value);
+    final minutes = (parsed ?? fallback).clamp(min, max);
+    onChanged(minutes);
+
+    if (parsed != null && parsed != minutes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Timer duration must be $min-$max minutes.')),
+      );
+    }
   }
 
   void _update(BuildContext context, settings_entity.AppSettings settings) {

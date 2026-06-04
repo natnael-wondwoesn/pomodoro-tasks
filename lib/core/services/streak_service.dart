@@ -165,8 +165,9 @@ class StreakService {
 
         tx.update(pairRef, {'streaks': streaks});
       });
-    } catch (e) {
-      debugPrint('Streak update error: $e');
+    } catch (e, stack) {
+      debugPrint('Streak update error for user=$userId pair=$pairId: $e');
+      debugPrint('Streak stack: $stack');
     }
   }
 }

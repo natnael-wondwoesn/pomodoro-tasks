@@ -35,6 +35,16 @@ class TimerConfigUpdated extends TimerEvent {
   List<Object?> get props => [config];
 }
 
+class TimerTaskLinked extends TimerEvent {
+  final String? taskId;
+  final int totalRounds;
+
+  const TimerTaskLinked({this.taskId, required this.totalRounds});
+
+  @override
+  List<Object?> get props => [taskId, totalRounds];
+}
+
 class TimerUserSet extends TimerEvent {
   final String userId;
   final String? pairId;

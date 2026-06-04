@@ -17,6 +17,7 @@ class HomePage extends StatelessWidget {
   final String userId;
   final String? partnerId;
   final String partnerName;
+  final VoidCallback? onOpenTasks;
 
   const HomePage({
     super.key,
@@ -24,13 +25,35 @@ class HomePage extends StatelessWidget {
     required this.userId,
     this.partnerId,
     required this.partnerName,
+    this.onOpenTasks,
   });
+
+  static TaskEntity? _focusTask(TasksState state) {
+    if (state is! TasksLoaded) return null;
+    final open = state.tasks.where((t) => t.status != TaskStatus.done);
+    final inProgress = open.where((t) => t.status == TaskStatus.inProgress);
+    if (inProgress.isNotEmpty) return inProgress.first;
+    return open.isEmpty ? null : open.first;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: BlocBuilder<TasksBloc, TasksState>(
+      body: BlocListener<TasksBloc, TasksState>(
+        listenWhen: (prev, curr) {
+          final prevTask = HomePage._focusTask(prev);
+          final currTask = HomePage._focusTask(curr);
+          return prevTask?.id != currTask?.id;
+        },
+        listener: (context, state) {
+          final task = HomePage._focusTask(state);
+          context.read<TimerBloc>().add(TimerTaskLinked(
+                taskId: task?.id,
+                totalRounds: task?.estimatedPomodoros ?? 4,
+              ));
+        },
+        child: BlocBuilder<TasksBloc, TasksState>(
         builder: (context, taskState) {
           final tasks = taskState is TasksLoaded
               ? taskState.tasks
@@ -70,6 +93,7 @@ class HomePage extends StatelessWidget {
                       completedCount: completedCount,
                       completedPomodoros: completedPomodoros,
                       totalPomodoros: totalPomodoros,
+                      onOpenTasks: onOpenTasks,
                     )
                   : _CompactDashboard(
                       pairId: pairId,
@@ -81,6 +105,7 @@ class HomePage extends StatelessWidget {
                       completedCount: completedCount,
                       completedPomodoros: completedPomodoros,
                       totalPomodoros: totalPomodoros,
+                      onOpenTasks: onOpenTasks,
                     );
 
               return SingleChildScrollView(
@@ -90,6 +115,7 @@ class HomePage extends StatelessWidget {
             },
           );
         },
+      ),
       ),
     );
   }
@@ -105,6 +131,7 @@ class _CompactDashboard extends StatelessWidget {
   final int completedCount;
   final int completedPomodoros;
   final int totalPomodoros;
+  final VoidCallback? onOpenTasks;
 
   const _CompactDashboard({
     required this.pairId,
@@ -116,6 +143,7 @@ class _CompactDashboard extends StatelessWidget {
     required this.completedCount,
     required this.completedPomodoros,
     required this.totalPomodoros,
+    this.onOpenTasks,
   });
 
   @override
@@ -138,14 +166,14 @@ class _CompactDashboard extends StatelessWidget {
         const SizedBox(height: 16),
         DailyQuestionCard(pairId: pairId, userId: userId),
         const SizedBox(height: 16),
-        _NextTasksPanel(pairId: pairId),
+        _NextTasksPanel(pairId: pairId, onOpenTasks: onOpenTasks),
         const SizedBox(height: 16),
         PartnerPanel(
-                  partnerName: partnerName,
-                  pairId: pairId,
-                  userId: userId,
-                  partnerId: partnerId,
-                ),
+          partnerName: partnerName,
+          pairId: pairId,
+          userId: userId,
+          partnerId: partnerId,
+        ),
       ],
     );
   }
@@ -161,6 +189,7 @@ class _WideDashboard extends StatelessWidget {
   final int completedCount;
   final int completedPomodoros;
   final int totalPomodoros;
+  final VoidCallback? onOpenTasks;
 
   const _WideDashboard({
     required this.pairId,
@@ -172,6 +201,7 @@ class _WideDashboard extends StatelessWidget {
     required this.completedCount,
     required this.completedPomodoros,
     required this.totalPomodoros,
+    this.onOpenTasks,
   });
 
   @override
@@ -197,7 +227,11 @@ class _WideDashboard extends StatelessWidget {
                     totalPomodoros: totalPomodoros,
                   ),
                   const SizedBox(height: 16),
-                  StreakCard(pairId: pairId, userId: userId, partnerId: partnerId),
+                  StreakCard(
+                    pairId: pairId,
+                    userId: userId,
+                    partnerId: partnerId,
+                  ),
                   const SizedBox(height: 16),
                   DailyQuestionCard(pairId: pairId, userId: userId),
                 ],
@@ -208,7 +242,7 @@ class _WideDashboard extends StatelessWidget {
               flex: 2,
               child: Column(
                 children: [
-                  _NextTasksPanel(pairId: pairId),
+                  _NextTasksPanel(pairId: pairId, onOpenTasks: onOpenTasks),
                   const SizedBox(height: 16),
                   PartnerPanel(
                     partnerName: partnerName,
@@ -302,9 +336,9 @@ class _FocusPanel extends StatelessWidget {
                   Text(
                     '$emoji${state.timerState.statusLabel}',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontSize: 14,
-                          letterSpacing: 1.5,
-                        ),
+                      fontSize: 14,
+                      letterSpacing: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   TimerCircle(timerState: state.timerState),
@@ -413,29 +447,43 @@ class _ProgressStrip extends StatelessWidget {
 
 class _NextTasksPanel extends StatelessWidget {
   final String pairId;
+  final VoidCallback? onOpenTasks;
 
-  const _NextTasksPanel({required this.pairId});
+  const _NextTasksPanel({required this.pairId, this.onOpenTasks});
 
   @override
   Widget build(BuildContext context) {
-    return _DashboardPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onOpenTasks,
+        child: _DashboardPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  'Next up',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Next up',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: onOpenTasks,
+                    icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: const Text('View all'),
+                  ),
+                ],
               ),
-              const Icon(Icons.chevron_right_rounded),
+              const SizedBox(height: 10),
+              IgnorePointer(
+                child: TaskListWidget(pairId: pairId, compact: true),
+              ),
             ],
           ),
-          const SizedBox(height: 10),
-          TaskListWidget(pairId: pairId, compact: true),
-        ],
+        ),
       ),
     );
   }

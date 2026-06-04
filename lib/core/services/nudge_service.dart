@@ -84,15 +84,14 @@ class NudgeService {
         .doc(pairId)
         .collection('nudges')
         .where('targetUserId', isEqualTo: currentUserId)
-        .where('seen', isEqualTo: false)
         .orderBy('sentAt', descending: true)
-        .limit(1)
+        .limit(5)
         .snapshots()
         .listen((snapshot) {
       for (final change in snapshot.docChanges) {
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data();
-          if (data != null) {
+          if (data != null && data['seen'] != true) {
             _showNudgeNotification(data['message'] as String? ?? 'Hey!');
             change.doc.reference.update({'seen': true});
           }
