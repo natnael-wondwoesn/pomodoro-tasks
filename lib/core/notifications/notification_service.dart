@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pomodoro_tasks/core/constants/app_constants.dart';
 import 'package:pomodoro_tasks/features/roadmap/data/models/roadmap_goal_model.dart';
@@ -16,14 +15,14 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   var _initialized = false;
-  var _available = true;
   var _soundEnabled = true;
 
   static const _quoteNotificationBaseId = 900000;
   static const _timerNotificationId = 800000;
 
-  Future<void> init() async {
-    if (_initialized || kIsWeb) return;
+  Future<bool> init() async {
+    if (_initialized) return true;
+    if (kIsWeb) return false;
 
     tz.initializeTimeZones();
 
@@ -37,44 +36,64 @@ class NotificationService {
     );
 
     try {
-      await _plugin.initialize(
+      final result = await _plugin.initialize(
         settings: const InitializationSettings(
           android: androidSettings,
           iOS: darwinSettings,
           macOS: darwinSettings,
         ),
       );
-      await requestPermissions();
-    } on MissingPluginException catch (error) {
-      _available = false;
-      debugPrint('Notifications unavailable until full app rebuild: $error');
-    }
+      debugPrint('NotificationService.init: initialize returned $result');
 
-    _initialized = true;
+      _initialized = true;
+      await requestPermissions();
+      return true;
+    } catch (error) {
+      debugPrint('NotificationService.init FAILED: $error');
+      return false;
+    }
   }
 
   Future<void> requestPermissions() async {
-    if (kIsWeb || !_available) return;
+    if (kIsWeb) return;
 
     try {
-      await _plugin
+      final android = _plugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
-          >()
-          ?.requestNotificationsPermission();
-      await _plugin
+          >();
+      if (android != null) {
+        final granted = await android.requestNotificationsPermission();
+        debugPrint('NotificationService: Android permission granted=$granted');
+      }
+
+      final ios = _plugin
           .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin
-          >()
-          ?.requestPermissions(alert: true, badge: true, sound: true);
-      await _plugin
+          >();
+      if (ios != null) {
+        final granted = await ios.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        debugPrint('NotificationService: iOS permission granted=$granted');
+      }
+
+      final macos = _plugin
           .resolvePlatformSpecificImplementation<
             MacOSFlutterLocalNotificationsPlugin
-          >()
-          ?.requestPermissions(alert: true, badge: true, sound: true);
-    } on MissingPluginException catch (error) {
-      _available = false;
-      debugPrint('Notification permissions unavailable: $error');
+          >();
+      if (macos != null) {
+        final granted = await macos.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        debugPrint('NotificationService: macOS permission granted=$granted');
+      }
+    } catch (error) {
+      debugPrint('NotificationService: permission request failed: $error');
     }
   }
 
@@ -87,61 +106,75 @@ class NotificationService {
     required String body,
   }) async {
     if (kIsWeb) return;
-    await init();
-    if (!_available) return;
+    if (!await init()) {
+      debugPrint('NotificationService.showTimerComplete: init failed, skipping');
+      return;
+    }
 
-    await _plugin.show(
-      id: _timerNotificationId,
-      title: title,
-      body: body,
-      notificationDetails: _timerNotificationDetails,
-      payload: 'timer',
-    );
+    try {
+      await _plugin.show(
+        id: _timerNotificationId,
+        title: title,
+        body: body,
+        notificationDetails: _timerNotificationDetails,
+        payload: 'timer',
+      );
+      debugPrint('NotificationService.showTimerComplete: notification shown');
+    } catch (error) {
+      debugPrint('NotificationService.showTimerComplete FAILED: $error');
+    }
   }
 
   Future<void> scheduleBibleQuoteNotifications() async {
     if (kIsWeb) return;
-    await init();
-    if (!_available) return;
+    if (!await init()) return;
 
-    const hours = [0, 6, 12, 18];
-    for (var i = 0; i < hours.length; i++) {
-      final quote = _quoteForSlot(i);
-      await _plugin.zonedSchedule(
-        id: _quoteNotificationBaseId + i,
-        title: 'Bible verse',
-        body: '${quote.text} - ${quote.reference}',
-        scheduledDate: _nextTimeOfDay(hours[i]),
-        notificationDetails: _quoteNotificationDetails,
-        androidScheduleMode: AndroidScheduleMode.inexact,
-        matchDateTimeComponents: DateTimeComponents.time,
-        payload: 'quote:${quote.reference}',
-      );
+    try {
+      const hours = [0, 6, 12, 18];
+      for (var i = 0; i < hours.length; i++) {
+        final quote = _quoteForSlot(i);
+        await _plugin.zonedSchedule(
+          id: _quoteNotificationBaseId + i,
+          title: 'Bible verse',
+          body: '${quote.text} - ${quote.reference}',
+          scheduledDate: _nextTimeOfDay(hours[i]),
+          notificationDetails: _quoteNotificationDetails,
+          androidScheduleMode: AndroidScheduleMode.inexact,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: 'quote:${quote.reference}',
+        );
+      }
+      debugPrint('NotificationService: Bible quote notifications scheduled');
+    } catch (error) {
+      debugPrint('NotificationService.scheduleBibleQuote FAILED: $error');
     }
   }
 
   Future<void> syncRoadmapDeadlineNotifications(String pairId) async {
     if (kIsWeb || pairId.isEmpty) return;
-    await init();
-    if (!_available) return;
+    if (!await init()) return;
 
-    for (final roadmapId in const ['his', 'hers']) {
-      final snapshot = await FirebaseFirestore.instance
-          .collection(AppConstants.pairsCollection)
-          .doc(pairId)
-          .collection('roadmaps')
-          .doc(roadmapId)
-          .collection('goals')
-          .get();
+    try {
+      for (final roadmapId in const ['his', 'hers']) {
+        final snapshot = await FirebaseFirestore.instance
+            .collection(AppConstants.pairsCollection)
+            .doc(pairId)
+            .collection('roadmaps')
+            .doc(roadmapId)
+            .collection('goals')
+            .get();
 
-      for (final doc in snapshot.docs) {
-        final goal = RoadmapGoalModel.fromFirestore(doc);
-        await scheduleRoadmapDeadline(
-          pairId: pairId,
-          roadmapId: roadmapId,
-          goal: goal,
-        );
+        for (final doc in snapshot.docs) {
+          final goal = RoadmapGoalModel.fromFirestore(doc);
+          await scheduleRoadmapDeadline(
+            pairId: pairId,
+            roadmapId: roadmapId,
+            goal: goal,
+          );
+        }
       }
+    } catch (error) {
+      debugPrint('NotificationService.syncRoadmapDeadline FAILED: $error');
     }
   }
 
@@ -151,28 +184,32 @@ class NotificationService {
     required RoadmapGoal goal,
   }) async {
     if (kIsWeb) return;
-    await init();
-    if (!_available) return;
+    if (!await init()) return;
 
     final notificationId = _deadlineNotificationId(pairId, roadmapId, goal.id);
-    await _plugin.cancel(id: notificationId);
 
-    final deadline = goal.deadlineAt;
-    if (deadline == null ||
-        !deadline.isAfter(DateTime.now()) ||
-        goal.status != RoadmapGoalStatus.todo) {
-      return;
+    try {
+      await _plugin.cancel(id: notificationId);
+
+      final deadline = goal.deadlineAt;
+      if (deadline == null ||
+          !deadline.isAfter(DateTime.now()) ||
+          goal.status != RoadmapGoalStatus.todo) {
+        return;
+      }
+
+      await _plugin.zonedSchedule(
+        id: notificationId,
+        title: _deadlineTitle(roadmapId),
+        body: goal.title,
+        scheduledDate: tz.TZDateTime.from(deadline, tz.local),
+        notificationDetails: _deadlineNotificationDetails,
+        androidScheduleMode: AndroidScheduleMode.inexact,
+        payload: 'roadmap:$pairId:$roadmapId:${goal.id}',
+      );
+    } catch (error) {
+      debugPrint('NotificationService.scheduleRoadmapDeadline FAILED: $error');
     }
-
-    await _plugin.zonedSchedule(
-      id: notificationId,
-      title: _deadlineTitle(roadmapId),
-      body: goal.title,
-      scheduledDate: tz.TZDateTime.from(deadline, tz.local),
-      notificationDetails: _deadlineNotificationDetails,
-      androidScheduleMode: AndroidScheduleMode.inexact,
-      payload: 'roadmap:$pairId:$roadmapId:${goal.id}',
-    );
   }
 
   Future<void> cancelRoadmapDeadline({
@@ -181,12 +218,15 @@ class NotificationService {
     required String goalId,
   }) async {
     if (kIsWeb) return;
-    await init();
-    if (!_available) return;
+    if (!await init()) return;
 
-    await _plugin.cancel(
-      id: _deadlineNotificationId(pairId, roadmapId, goalId),
-    );
+    try {
+      await _plugin.cancel(
+        id: _deadlineNotificationId(pairId, roadmapId, goalId),
+      );
+    } catch (error) {
+      debugPrint('NotificationService.cancelRoadmapDeadline FAILED: $error');
+    }
   }
 
   int _deadlineNotificationId(String pairId, String roadmapId, String goalId) {
