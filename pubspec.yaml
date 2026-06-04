@@ -48,6 +48,7 @@ dependencies:
   game_levels_scrolling_map: ^0.0.7
   flutter_local_notifications: ^21.0.0
   timezone: ^0.11.0
+  url_launcher: ^6.3.2
 
 dependency_overrides:
   xml: ^7.0.1

@@ -17,6 +17,7 @@ import 'package:pomodoro_tasks/features/settings/presentation/pages/settings_pag
 import 'package:pomodoro_tasks/features/canvas/presentation/pages/canvas_gallery_page.dart';
 import 'package:pomodoro_tasks/features/canvas/presentation/bloc/canvas_bloc.dart';
 import 'package:pomodoro_tasks/features/quotes/presentation/bloc/quotes_bloc.dart';
+import 'package:pomodoro_tasks/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:pomodoro_tasks/features/tasks/presentation/bloc/tasks_bloc.dart';
 import 'package:pomodoro_tasks/features/timeline/presentation/bloc/timeline_bloc.dart';
 import 'package:pomodoro_tasks/features/timer/presentation/bloc/timer_bloc.dart';
@@ -47,6 +48,10 @@ class _AppShellState extends State<AppShell> {
     context.read<TimerBloc>().add(
       TimerUserSet(userId: widget.user.id, pairId: widget.user.pairId),
     );
+
+    // Sync initial timer config from settings
+    final settings = context.read<SettingsBloc>().state.settings;
+    context.read<TimerBloc>().add(TimerConfigUpdated(settings.timerConfig));
 
     if (widget.user.pairId != null) {
       context.read<TasksBloc>().add(
@@ -82,7 +87,12 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final isLight = Theme.of(context).brightness == Brightness.light;
 
-    return Scaffold(
+    return BlocListener<SettingsBloc, SettingsState>(
+      listenWhen: (prev, curr) => prev.settings.timerConfig != curr.settings.timerConfig,
+      listener: (context, state) {
+        context.read<TimerBloc>().add(TimerConfigUpdated(state.settings.timerConfig));
+      },
+      child: Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: isLight
@@ -194,6 +204,7 @@ class _AppShellState extends State<AppShell> {
           NavigationDestination(icon: Icon(Icons.brush_rounded), label: 'Canvas'),
         ],
       ),
+    ),
     );
   }
 

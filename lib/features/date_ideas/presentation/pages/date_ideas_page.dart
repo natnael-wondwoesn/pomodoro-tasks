@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:pomodoro_tasks/core/data/date_ideas_pool.dart';
 import 'package:pomodoro_tasks/core/theme/app_colors.dart';
 import 'package:pomodoro_tasks/core/theme/app_gradients.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
 
@@ -506,9 +507,12 @@ class _AddisAiResultView extends StatelessWidget {
             runSpacing: 8,
             children: [
               for (final source in result.sources.take(4))
-                Chip(
+                ActionChip(
                   avatar: const Icon(Icons.public_rounded, size: 16),
                   label: Text(source.title, overflow: TextOverflow.ellipsis),
+                  onPressed: source.uri.isEmpty
+                      ? null
+                      : () => _openExternalUrl(source.uri),
                 ),
             ],
           ),
@@ -527,45 +531,79 @@ class _AddisIdeaTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    idea.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                _RatingPill(score: idea.rating),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(idea.summary),
-            if (idea.location.isNotEmpty) ...[
-              const SizedBox(height: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: idea.sourceUrl.isEmpty
+            ? null
+            : () => _openExternalUrl(idea.sourceUrl),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  const Icon(Icons.place_rounded, size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(child: Text(idea.location)),
+                  Expanded(
+                    child: Text(
+                      idea.title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  _RatingPill(score: idea.rating),
                 ],
               ),
-            ],
-            if (idea.bestFor.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text(idea.bestFor, style: Theme.of(context).textTheme.bodySmall),
+              Text(idea.summary),
+              if (idea.location.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.place_rounded, size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(child: Text(idea.location)),
+                  ],
+                ),
+              ],
+              if (idea.bestFor.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  idea.bestFor,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+              if (idea.sourceUrl.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.open_in_new_rounded, size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        idea.sourceTitle.isEmpty
+                            ? 'Open reference'
+                            : idea.sourceTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+Future<void> _openExternalUrl(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null || !uri.hasScheme) return;
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
 class _RatingPill extends StatelessWidget {
@@ -670,29 +708,55 @@ class _GeminiDateIdeasClient {
   }
 
   String _promptFor(String userPrompt) {
-    return '''
-Use Google Search to identify current, real date ideas or events in Addis Ababa, Ethiopia only.
-User preference: $userPrompt
+    final now = DateTime.now();
+    final monthYear = '${_monthName(now.month)} ${now.year}';
 
-Rules:
-- Addis Ababa only. Reject/ignore places outside Addis Ababa.
-- Prefer currently available events, venues, exhibitions, cafes, parks, live music, workshops, markets, or quiet date spots.
-- Rate each idea 1-10 for date quality, considering safety, couple vibe, uniqueness, cost, and practical access.
-- Keep it concise. Do not invent exact times or prices unless search evidence supports them.
-- Return only valid JSON with this shape:
+    return '''
+You are a local Addis Ababa date-night scout. Use Google Search with queries dated to $monthYear to find CURRENT, REAL date ideas or events happening NOW in Addis Ababa, Ethiopia.
+
+User vibe: $userPrompt
+
+## Search Strategy
+1. Search for: "Addis Ababa events $monthYear", "things to do Addis Ababa this week", "best date spots Addis Ababa ${now.year}"
+2. Search for: "Addis Ababa $userPrompt ${now.year}"
+3. Prioritize results from the last 90 days. Discard anything older than 12 months unless it is a permanent venue still operating.
+4. Cross-reference: if a venue/event appears in multiple recent sources, rank it higher.
+
+## Strict Rules
+- ADDIS ABABA ONLY. Reject anything outside the city.
+- ONLY include places/events you found via search with evidence they currently exist and operate. Never invent or hallucinate venues.
+- Prefer: ongoing exhibitions, new restaurant openings, weekly live music nights, seasonal markets, recently reviewed cafes, active cultural centers, parks with recent visitor reviews.
+- If a place has a Google Maps listing, Instagram, or recent TripAdvisor/Google review (within 6 months), it is more trustworthy.
+- Rate each idea 1-10 for couple date quality: safety, romantic atmosphere, uniqueness, affordability, and how easy it is to get there.
+- Do NOT invent prices, hours, or phone numbers unless the search source explicitly states them.
+- Every idea MUST include the actual URL you found it from. Use the real source page — not a made-up link.
+- If you cannot find 3 verified ideas, return fewer rather than fabricating.
+
+## Response Format
+Return ONLY valid JSON (no markdown, no explanation):
 {
   "ideas": [
     {
-      "title": "short title",
-      "location": "specific Addis Ababa location or area",
+      "title": "short descriptive title",
+      "location": "specific neighborhood or landmark in Addis Ababa",
       "rating": 8,
-      "summary": "why it is a good date",
-      "bestFor": "budget/vibe/timing note"
+      "summary": "2-3 sentences on why this is a great date and what to expect",
+      "bestFor": "e.g. budget-friendly weekend afternoon / romantic evening / adventurous couples",
+      "sourceTitle": "title of the webpage you found this from",
+      "sourceUrl": "https://actual-source-url.com"
     }
   ]
 }
-Return 3 ideas maximum.
+Return 5 ideas maximum. Quality over quantity.
 ''';
+  }
+
+  static String _monthName(int month) {
+    const months = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return months[month];
   }
 
   List<_AddisDateIdeaSource> _sourcesFrom(Map<String, dynamic>? candidate) {
@@ -720,10 +784,18 @@ class _AddisDateIdeasResult {
     Map<String, dynamic> json,
     List<_AddisDateIdeaSource> sources,
   ) {
-    final ideas = ((json['ideas'] as List?) ?? const [])
+    final rawIdeas = ((json['ideas'] as List?) ?? const [])
         .whereType<Map<String, dynamic>>()
-        .map(_AddisDateIdea.fromJson)
         .toList();
+    final ideas = [
+      for (var index = 0; index < rawIdeas.length; index++)
+        _AddisDateIdea.fromJson(
+          rawIdeas[index],
+          fallbackSource: sources.isEmpty
+              ? null
+              : sources[index.clamp(0, sources.length - 1)],
+        ),
+    ];
     if (ideas.isEmpty) {
       throw Exception('No Addis Ababa ideas found. Try a different vibe.');
     }
@@ -737,6 +809,8 @@ class _AddisDateIdea {
   final int rating;
   final String summary;
   final String bestFor;
+  final String sourceTitle;
+  final String sourceUrl;
 
   const _AddisDateIdea({
     required this.title,
@@ -744,16 +818,29 @@ class _AddisDateIdea {
     required this.rating,
     required this.summary,
     required this.bestFor,
+    required this.sourceTitle,
+    required this.sourceUrl,
   });
 
-  factory _AddisDateIdea.fromJson(Map<String, dynamic> json) {
+  factory _AddisDateIdea.fromJson(
+    Map<String, dynamic> json, {
+    _AddisDateIdeaSource? fallbackSource,
+  }) {
     final rating = json['rating'];
+    final sourceTitle = json['sourceTitle'] as String?;
+    final sourceUrl = json['sourceUrl'] as String?;
     return _AddisDateIdea(
       title: json['title'] as String? ?? 'Addis date idea',
       location: json['location'] as String? ?? '',
       rating: rating is num ? rating.round().clamp(1, 10) : 7,
       summary: json['summary'] as String? ?? '',
       bestFor: json['bestFor'] as String? ?? '',
+      sourceTitle: sourceTitle?.isNotEmpty == true
+          ? sourceTitle!
+          : fallbackSource?.title ?? '',
+      sourceUrl: sourceUrl?.isNotEmpty == true
+          ? sourceUrl!
+          : fallbackSource?.uri ?? '',
     );
   }
 }
