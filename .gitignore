@@ -47,3 +47,4 @@ app.*.map.json
 *.claude/
 *.superpowers/.superpowers/
 android/app/google-services.json
+AGENTS.md
