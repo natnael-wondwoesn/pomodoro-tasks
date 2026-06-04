@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:get_it/get_it.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -63,7 +64,11 @@ Future<void> init() async {
   sl.registerLazySingleton(() => sharedPreferences);
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
-  sl.registerLazySingleton(() => GoogleSignIn());
+  sl.registerLazySingleton(() => GoogleSignIn(
+        clientId: Platform.isIOS
+            ? '361376502244-lsajhr4l57o0iq04bagr9ic7mq9ovtb4.apps.googleusercontent.com'
+            : null,
+      ));
 
   // Auth
   sl.registerLazySingleton<AuthRemoteDatasource>(
